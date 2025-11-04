@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import mysql.connector
 from mysql.connector import Error
-import txt
+import csv
 import uuid
 
 
@@ -96,7 +96,7 @@ def insert_data(connection, csv_file):
         connection.commit()
         print("Data inserted successfully.")
     except FileNotFoundError:
-        print(f"TXT file '{txt_file}' not found.")
+        print(f"CSV file '{csv_file}' not found.")
     except Error as e:
         print(f"Error while inserting data: {e}")
     finally:
