@@ -13,6 +13,7 @@ def log_queries(func):
     Decorator that logs SQL queries executed by the decorated function.
     Logs the time and the exact SQL query before execution.
     """
+    
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         # Extract the query argument (positional or keyword)
