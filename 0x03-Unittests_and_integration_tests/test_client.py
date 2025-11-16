@@ -82,3 +82,60 @@ if __name__ == "__main__":
         client = GithubOrgClient("example")
         result = client.has_license(repo, license_key)
         self.assertEqual(result, expected)
+
+from unittest.mock import patch
+from parameterized import parameterized_class
+from fixtures import org_payload, repos_payload, expected_repos, apache2_repos
+
+
+@parameterized_class([
+    {
+        "org_payload": org_payload,
+        "repos_payload": repos_payload,
+        "expected_repos": expected_repos,
+        "apache2_repos": apache2_repos,
+    }
+])
+class TestIntegrationGithubOrgClient(unittest.TestCase):
+    """ Integration tests for GithubOrgClient.public_repos """
+
+    @classmethod
+    def setUpClass(cls):
+        """ Start patching requests.get with fixture-based mock """
+
+        def mocked_requests_get(url):
+            class MockResponse:
+                def __init__(self, json_data):
+                    self._json_data = json_data
+
+                def json(self):
+                    return self._json_data
+
+            if url.endswith("/orgs/testorg"):
+                return MockResponse(cls.org_payload)
+            if url.endswith("/orgs/testorg/repos"):
+                return MockResponse(cls.repos_payload)
+
+            return MockResponse(None)
+
+        cls.get_patcher = patch("requests.get", side_effect=mocked_requests_get)
+        cls.get_patcher.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        """ Stop the requests.get patcher """
+        cls.get_patcher.stop()
+
+    def test_public_repos(self):
+        """ Test that public_repos returns expected repo names """
+        client = GithubOrgClient("testorg")
+        self.assertEqual(client.public_repos(), self.expected_repos)
+
+    def test_public_repos_with_license(self):
+        """ Test filtering repos using Apache 2.0 license """
+        client = GithubOrgClient("testorg")
+        self.assertEqual(
+            client.public_repos(license="apache-2.0"),
+            self.apache2_repos
+        )
+
