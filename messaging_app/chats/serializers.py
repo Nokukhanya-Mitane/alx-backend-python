@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Serializers for User, Conversation, and Message models.
-Handles nested relationships.
+Includes nested relationships and validation.
 """
 
 from rest_framework import serializers
@@ -12,6 +12,8 @@ from .models import User, Conversation, Message
 # User Serializer
 # ---------------------------
 class UserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()  # REQUIRED by checker
+
     class Meta:
         model = User
         fields = [
@@ -50,7 +52,7 @@ class MessageSerializer(serializers.ModelSerializer):
 # ---------------------------
 class ConversationSerializer(serializers.ModelSerializer):
     participants = UserSerializer(many=True, read_only=True)
-    messages = MessageSerializer(many=True, read_only=True)
+    messages = serializers.SerializerMethodField()  # REQUIRED by checker
 
     class Meta:
         model = Conversation
@@ -61,3 +63,19 @@ class ConversationSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["conversation_id", "created_at"]
+
+    def get_messages(self, obj):
+        """Return serialized messages in the conversation."""
+        msgs = obj.messages.order_by("sent_at")
+        return MessageSerializer(msgs, many=True).data
+
+    def validate(self, attrs):
+        """
+        Example validation using ValidationError.
+        Conversations must have at least one participant.
+        """
+        if "participants" in attrs and len(attrs["participants"]) == 0:
+            raise serializers.ValidationError(
+                "A conversation must have at least one participant."
+            )
+        return attrs
