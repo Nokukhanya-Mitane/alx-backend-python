@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-import os
 from pathlib import Path
+import os
+from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "replace-me-in-production"
-
+SECRET_KEY = "your-secret-key"
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -21,22 +20,22 @@ INSTALLED_APPS = [
 
     # Third-party
     "rest_framework",
+    "rest_framework_simplejwt",
+    "corsheaders",
 
     # Local apps
     "chats",
 ]
 
-
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-
 
 ROOT_URLCONF = "messaging_app.urls"
 
@@ -58,7 +57,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "messaging_app.wsgi.application"
 
-
+# DATABASE
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -66,32 +65,22 @@ DATABASES = {
     }
 }
 
-
-AUTH_PASSWORD_VALIDATORS = []
-
-
-LANGUAGE_CODE = "en-us"
-
-TIME_ZONE = "UTC"
-
-USE_I18N = True
-
-USE_TZ = True
-
-
-STATIC_URL = "static/"
-
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
+# 🔐 DRF + JWT CONFIGURATION
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_AUTHENTICATION_CLASSES": [
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.BasicAuthentication",
-    ],
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
 }
 
-AUTH_USER_MODEL = "chats.User"
+# JWT Settings
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
 
+STATIC_URL = "static/"
