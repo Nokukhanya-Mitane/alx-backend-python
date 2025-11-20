@@ -17,3 +17,16 @@ conversations_router = routers.NestedDefaultRouter(router, r'conversations', loo
 conversations_router.register(r'messages', views.MessageViewSet, basename='conversation-messages')
 
 urlpatterns = router.urls + conversations_router.urls
+#!/usr/bin/env python3
+"""Main URL routing for messaging_app."""
+
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+
+    # Required for assignment checkers
+    path('api/', include('chats.urls')),
+    path('api-auth/', include('rest_framework.urls')),
+]
