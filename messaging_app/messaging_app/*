@@ -1,0 +1,49 @@
+1️⃣ Create Django Project
+
+In your terminal:
+
+django-admin startproject messaging_app
+
+2️⃣ Install Django REST Framework
+
+Inside your virtual environment, run:
+
+pip install djangorestframework
+
+
+You may also create a requirements.txt:
+
+pip freeze > requirements.txt
+
+3️⃣ Configure REST Framework in settings.py
+
+Open:
+
+messaging_app/messaging_app/settings.py
+
+
+Add rest_framework to INSTALLED_APPS:
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'rest_framework',
+    'chats',
+]
+
+(Optional but recommended) Add REST framework config:
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ]
+}
+
+4️⃣ Create Chats App
+cd messaging_app
+python manage.py startapp chats
+
