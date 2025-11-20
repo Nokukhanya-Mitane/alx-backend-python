@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
-"""Main URL configuration for messaging_app."""
-
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
 
-    # Required by checker: include chats routes under /api/
-    path('api/', include('chats.urls')),
+    # 🔐 JWT Authentication
+    path("api/auth/login/", TokenObtainPairView.as_view(), name="jwt-login"),
+    path("api/auth/refresh/", TokenRefreshView.as_view(), name="jwt-refresh"),
+
+    # Messaging App Routes
+    path("api/", include("chats.urls")),
+
+    # DRF Auth (needed for browsable API)
+    path("api-auth/", include("rest_framework.urls")),
 ]
 
