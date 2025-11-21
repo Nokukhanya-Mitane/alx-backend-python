@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from datetime import datetime, timedelta
 from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 
 
 class OffensiveLanguageMiddleware:
@@ -52,3 +53,39 @@ class OffensiveLanguageMiddleware:
         if x_forwarded_for:
             return x_forwarded_for.split(",")[0].strip()
         return request.META.get("REMOTE_ADDR")
+
+
+
+class RolePermissionMiddleware:
+    """
+    Middleware to enforce user role permissions.
+    Only users with roles 'admin' or 'moderator' may access restricted endpoints.
+    """
+
+    ALLOWED_ROLES = ["admin", "moderator"]
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = request.user
+
+        # If user is not authenticated, deny access
+        if not user.is_authenticated:
+            return JsonResponse(
+                {"error": "Authentication required"},
+                status=403
+            )
+
+        # Attempt to get custom user.role
+        user_role = getattr(user, "role", None)
+
+        # Deny if user role is not allowed
+        if user_role not in self.ALLOWED_ROLES:
+            return JsonResponse(
+                {"error": "You do not have permission to perform this action"},
+                status=403
+            )
+
+        return self.get_response(request)
+
