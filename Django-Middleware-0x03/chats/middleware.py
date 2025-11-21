@@ -1,44 +1,54 @@
 #!/usr/bin/env python3
-import logging
-from datetime import datetime
-from django.http import HttpResponseForbidden
-
-class RequestLoggingMiddleware:
-    """Middleware to log user requests with timestamp, user, and path."""
-
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-        # Configure logging to write into requests.log
-        logging.basicConfig(
-            filename='requests.log',
-            level=logging.INFO,
-            format='%(message)s'
-        )
-
-    def __call__(self, request):
-        user = request.user if request.user.is_authenticated else "Anonymous"
-        log_message = f"{datetime.now()} - User: {user} - Path: {request.path}"
-
-        logging.info(log_message)
-
-        response = self.get_response(request)
-        return response
+from datetime import datetime, timedelta
+from django.http import HttpResponse, JsonResponse
 
 
-class RestrictAccessByTimeMiddleware:
-    """Middleware to restrict access to chat features outside 6AM–9PM."""
+class OffensiveLanguageMiddleware:
+    """
+    Middleware to limit message sending per IP address.
+    Allows max 5 POST requests per minute.
+    """
+
+    # Store IP timestamps: { "ip": [timestamp1, timestamp2, ...] }
+    ip_request_log = {}
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        current_hour = datetime.now().hour
+        ip = self.get_client_ip(request)
 
-        # Allow access only between 6 AM (06:00) and 9 PM (21:00)
-        if current_hour < 6 or current_hour >= 21:
-            return HttpResponseForbidden(
-                "Chat access is restricted between 9PM and 6AM."
-            )
+        # Only monitor POST requests (sending messages)
+        if request.method == "POST":
+            now = datetime.now()
+
+            # Initialize list for this IP
+            if ip not in self.ip_request_log:
+                self.ip_request_log[ip] = []
+
+            # Filter timestamps: keep only messages from the last 60 seconds
+            one_minute_ago = now - timedelta(minutes=1)
+            self.ip_request_log[ip] = [
+                ts for ts in self.ip_request_log[ip] if ts > one_minute_ago
+            ]
+
+            # Check if user exceeded limit
+            if len(self.ip_request_log[ip]) >= 5:
+                return JsonResponse(
+                    {
+                        "error": "Message rate limit exceeded. Try again in 1 minute."
+                    },
+                    status=429  # Too Many Requests
+                )
+
+            # Add new timestamp
+            self.ip_request_log[ip].append(now)
 
         return self.get_response(request)
+
+    def get_client_ip(self, request):
+        """Retrieve the client IP safely."""
+        x_forwarded_for = request.headers.get("X-Forwarded-For")
+        if x_forwarded_for:
+            return x_forwarded_for.split(",")[0].strip()
+        return request.META.get("REMOTE_ADDR")
