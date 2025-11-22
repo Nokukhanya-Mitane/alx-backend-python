@@ -89,3 +89,33 @@ class RolePermissionMiddleware:
 
         return self.get_response(request)
 
+class RolePermissionMiddleware:
+    """
+    Middleware to enforce user role permissions.
+    Only users with role 'admin' or 'moderator' may continue.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = request.user
+
+        # Block if user is not authenticated
+        if not user.is_authenticated:
+            return JsonResponse(
+                {"error": "Authentication required"},
+                status=403
+            )
+
+        # Get user's role from custom user model
+        role = getattr(user, "role", None)
+
+        # Only allow admin or moderator
+        if role not in ["admin", "moderator"]:
+            return JsonResponse(
+                {"error": "Forbidden: insufficient role permissions"},
+                status=403
+            )
+
+        return self.get_response(request)
