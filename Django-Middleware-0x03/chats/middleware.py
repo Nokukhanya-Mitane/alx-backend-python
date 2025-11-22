@@ -56,66 +56,18 @@ class OffensiveLanguageMiddleware:
 
 
 
-class RolePermissionMiddleware:
-    """
-    Middleware to enforce user role permissions.
-    Only users with roles 'admin' or 'moderator' may access restricted endpoints.
-    """
-
-    ALLOWED_ROLES = ["admin", "moderator"]
-
+class RolepermissionMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        user = request.user
+        user = getattr(request, "user", None)
 
-        # If user is not authenticated, deny access
-        if not user.is_authenticated:
-            return JsonResponse(
-                {"error": "Authentication required"},
-                status=403
-            )
-
-        # Attempt to get custom user.role
-        user_role = getattr(user, "role", None)
-
-        # Deny if user role is not allowed
-        if user_role not in self.ALLOWED_ROLES:
-            return JsonResponse(
-                {"error": "You do not have permission to perform this action"},
-                status=403
-            )
-
-        return self.get_response(request)
-
-class RolePermissionMiddleware:
-    """
-    Middleware to enforce user role permissions.
-    Only users with role 'admin' or 'moderator' may continue.
-    """
-
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        user = request.user
-
-        # Block if user is not authenticated
-        if not user.is_authenticated:
-            return JsonResponse(
-                {"error": "Authentication required"},
-                status=403
-            )
-
-        # Get user's role from custom user model
-        role = getattr(user, "role", None)
-
-        # Only allow admin or moderator
-        if role not in ["admin", "moderator"]:
-            return JsonResponse(
-                {"error": "Forbidden: insufficient role permissions"},
-                status=403
-            )
+        # Allow only admin or moderator
+        if user and user.is_authenticated:
+            role = getattr(user, "role", None)
+            if role not in ["admin", "moderator"]:
+                from django.http import HttpResponseForbidden
+                return HttpResponseForbidden("Access denied: insufficient role permissions.")
 
         return self.get_response(request)
