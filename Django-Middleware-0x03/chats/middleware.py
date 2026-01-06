@@ -1,73 +1,93 @@
 #!/usr/bin/env python3
-from datetime import datetime, timedelta
-from django.http import HttpResponse, JsonResponse
-from django.http import JsonResponse
+from datetime import datetime
+from django.http import HttpResponseForbidden, JsonResponse
+
+
+class RequestLoggingMiddleware:
+    """
+    Middleware that logs user requests with timestamp, user and path.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = request.user if request.user.is_authenticated else "Anonymous"
+
+        log_entry = f"{datetime.now()} - User: {user} - Path: {request.path}\n"
+
+        with open("requests.log", "a") as log_file:
+            log_file.write(log_entry)
+
+        return self.get_response(request)
+
+
+class RestrictAccessByTimeMiddleware:
+    """
+    Restricts access outside 6PM - 9PM
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        current_hour = datetime.now().hour
+
+        if current_hour < 18 or current_hour >= 21:
+            return HttpResponseForbidden("Chat access is restricted at this time.")
+
+        return self.get_response(request)
 
 
 class OffensiveLanguageMiddleware:
     """
-    Middleware to limit message sending per IP address.
-    Allows max 5 POST requests per minute.
+    Limits POST requests to 5 per minute per IP.
     """
 
-    # Store IP timestamps: { "ip": [timestamp1, timestamp2, ...] }
-    ip_request_log = {}
+    ip_requests = {}
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        ip = self.get_client_ip(request)
-
-        # Only monitor POST requests (sending messages)
         if request.method == "POST":
+            ip = request.META.get("REMOTE_ADDR")
             now = datetime.now()
 
-            # Initialize list for this IP
-            if ip not in self.ip_request_log:
-                self.ip_request_log[ip] = []
-
-            # Filter timestamps: keep only messages from the last 60 seconds
-            one_minute_ago = now - timedelta(minutes=1)
-            self.ip_request_log[ip] = [
-                ts for ts in self.ip_request_log[ip] if ts > one_minute_ago
+            self.ip_requests.setdefault(ip, [])
+            self.ip_requests[ip] = [
+                t for t in self.ip_requests[ip]
+                if (now - t).seconds < 60
             ]
 
-            # Check if user exceeded limit
-            if len(self.ip_request_log[ip]) >= 5:
+            if len(self.ip_requests[ip]) >= 5:
                 return JsonResponse(
-                    {
-                        "error": "Message rate limit exceeded. Try again in 1 minute."
-                    },
-                    status=429  # Too Many Requests
+                    {"error": "Too many messages sent. Try again later."},
+                    status=429
                 )
 
-            # Add new timestamp
-            self.ip_request_log[ip].append(now)
+            self.ip_requests[ip].append(now)
 
         return self.get_response(request)
 
-    def get_client_ip(self, request):
-        """Retrieve the client IP safely."""
-        x_forwarded_for = request.headers.get("X-Forwarded-For")
-        if x_forwarded_for:
-            return x_forwarded_for.split(",")[0].strip()
-        return request.META.get("REMOTE_ADDR")
-
-
 
 class RolepermissionMiddleware:
+    """
+    Allows only admin or moderator users.
+    """
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        user = getattr(request, "user", None)
+        user = request.user
 
-        # Allow only admin or moderator
-        if user and user.is_authenticated:
-            role = getattr(user, "role", None)
-            if role not in ["admin", "moderator"]:
-                from django.http import HttpResponseForbidden
-                return HttpResponseForbidden("Access denied: insufficient role permissions.")
+        if not user.is_authenticated:
+            return HttpResponseForbidden("Authentication required")
+
+        role = getattr(user, "role", None)
+
+        if role not in ["admin", "moderator"]:
+            return HttpResponseForbidden("Access denied")
 
         return self.get_response(request)
