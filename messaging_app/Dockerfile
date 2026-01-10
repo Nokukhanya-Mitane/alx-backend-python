@@ -1,5 +1,7 @@
 FROM python:3.10
 
+# docker run -p 8000:8000 messaging_app
+
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
