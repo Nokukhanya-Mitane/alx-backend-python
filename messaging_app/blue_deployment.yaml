@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
         - name: messaging
-          image: messaging_app:1.0
+          image: messaging_app:2.0
           ports:
             - containerPort: 8000
