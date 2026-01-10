@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     stages {
+
         stage('Checkout') {
             steps {
                 git branch: 'main',
@@ -13,10 +14,8 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                python3 -m venv venv
-                . venv/bin/activate
-                pip install --upgrade pip
-                pip install -r requirements.txt
+                pip3 install --upgrade pip
+                pip3 install -r messaging_app/requirements.txt
                 '''
             }
         }
@@ -24,37 +23,15 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                . venv/bin/activate
-                pytest
+                pytest --junitxml=report.xml
                 '''
             }
         }
+    }
 
-        stage('Archive Test Report') {
-            steps {
-                junit 'test-results.xml'
-            }
+    post {
+        always {
+            archiveArtifacts artifacts: 'report.xml', fingerprint: true
         }
     }
 }
-        stage('Build Docker Image') {
-            steps {
-                sh 'docker build -t yourdockerhubuser/messaging_app:latest .'
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    docker push yourdockerhubuser/messaging_app:latest
-                    '''
-                }
-            }
-        }
-
