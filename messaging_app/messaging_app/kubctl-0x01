@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Scale deployment
+kubectl scale deployment django-messaging --replicas=3
+
+# Verify pods
+kubectl get pods
+
+# Load testing
+wrk http://localhost:8000 ||
