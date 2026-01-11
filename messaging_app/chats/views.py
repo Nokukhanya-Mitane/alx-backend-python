@@ -8,6 +8,16 @@ from .serializers import ConversationSerializer, MessageSerializer
 from .permissions import IsParticipantOfConversation
 from .filters import MessageFilter
 from .pagination import MessagePagination
+from django.views.decorators.cache import cache_page
+from django.shortcuts import render
+from messaging.models import Message
+
+
+@cache_page(60)
+def conversation_messages(request):
+    messages = Message.objects.all()
+    return render(request, 'messages.html', {'messages': messages})
+
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
