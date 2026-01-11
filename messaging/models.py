@@ -27,3 +27,13 @@ class MessageHistory(models.Model):
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     old_content = models.TextField()
     edited_at = models.DateTimeField(auto_now_add=True)
+
+class UnreadMessagesManager(models.Manager):
+    def for_user(self, user):
+        return self.filter(receiver=user, read=False).only('sender', 'content', 'timestamp')
+
+
+class Message(models.Model):
+    ...
+    objects = models.Manager()
+    unread = UnreadMessagesManager()
